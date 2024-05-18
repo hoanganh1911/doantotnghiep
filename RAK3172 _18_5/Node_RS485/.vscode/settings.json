@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "fund_circular_queue.h": "c",
+        "typeinfo": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
+}

@@ -1,0 +1,7 @@
+{
+    "configuration": "debug=l2,supportat=1,supportlora=2,supportAS923=1,supportAU915=2,supportCN470=2,supportCN779=2,supportEU433=2,supportEU868=2,supportKR920=2,supportIN865=2,supportUS915=2,supportRU864=2,supportLA915=2",
+    "board": "rak_rui:stm32:WisDuoRAK3172TBoard",
+    "sketch": "Node_RS485.ino",
+    "port": "/dev/ttyUSB0",
+    "programmer": "nrfjprog"
+}
