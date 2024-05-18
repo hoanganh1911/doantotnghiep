@@ -95,7 +95,7 @@ void app_main(void){
 
     uart1_init();
 
-    ws_recv_queue = xQueueCreate(1,sizeof(ws_recv_dt_t));
+    ws_recv_queue = xQueueCreate(10,sizeof(ws_recv_dt_t));
 
     wifi_init();
     wifiap_init(&ap1);
@@ -104,24 +104,24 @@ void app_main(void){
 
     wsserver_init(&ws);
 
-    xTaskCreate(ws_recv_task,"ws_receive_task",4096,NULL,10,NULL);
+    xTaskCreate(ws_recv_task,"ws_receive_task",4096,NULL,5,NULL);
 }
 
 static void ws_server_send_first_time()
 {
 
-//	wsserver_data_t send_data;
-//
-//	char *data_rak = nvs_create_lorawan_data();
-//	if(ws_start == true)
-//	{
-//		memset(send_data.data, 0, WS_MAX_DATA_LEN);
-//		sprintf((char *)send_data.data, "%s", data_rak);
-//		send_data.len = strlen((char *)send_data.data);
-//		ESP_LOGE(TAG, "Send to ws: %s", (char *)send_data.data);
-//		wsserver_sendto_all(&ws, &send_data);
-//	}
-//	cJSON_free(data_rak);
+	wsserver_data_t send_data;
+
+	char *data_rak = nvs_create_lorawan_data();
+	if(ws_start == true)
+	{
+		memset(send_data.data, 0, WS_MAX_DATA_LEN);
+		sprintf((char *)send_data.data, "%s", data_rak);
+		send_data.len = strlen((char *)send_data.data);
+		ESP_LOGE(TAG, "Send to ws: %s", (char *)send_data.data);
+		wsserver_sendto_all(&ws, &send_data);
+	}
+	free(data_rak);
 
 }
 
@@ -135,9 +135,11 @@ static void ws_recv_task(void *pvParameters){
 
 				rcv_data.data[rcv_data.len] = '\0';
 
-				ESP_LOGI("Data","Recv data: %s",rcv_data.data);
+				ESP_LOGI("Data","Recv data from queue: %s with len %d",rcv_data.data,strlen(rcv_data.data));
 
-				cJSON *dt_Json =  cJSON_Parse(rcv_data.data);
+				ESP_LOGI("LOG HEAP","free size %ld",esp_get_free_heap_size());
+				const char * c_char_dt = (const char *)rcv_data.data;
+				cJSON *dt_Json =  cJSON_Parse(c_char_dt);
 				if(dt_Json == NULL)
 				{
 					ESP_LOGE("JSON","dt_JSON error");
@@ -149,86 +151,99 @@ static void ws_recv_task(void *pvParameters){
 
 				free(rcv_data.data);
 
-				cJSON *mbdesc = cJSON_GetObjectItem(dt_Json, "mbdesc");
-				if(mbdesc == NULL)
+				if(cJSON_HasObjectItem(dt_Json,(const char *)"mbdesc"))
 				{
-					ESP_LOGE("JSON","mbdesc error");
-				}
-				else
-				{
-					ESP_LOGI("JSON","mbdesc OK");
+					cJSON *mbdesc = cJSON_GetObjectItem(dt_Json, "mbdesc");
+					if(mbdesc == NULL)
+					{
+						ESP_LOGE("JSON","mbdesc error");
+					}
+					else
+					{
+						ESP_LOGI("JSON","mbdesc OK");
+					}
+					if(cJSON_IsObject(mbdesc))
+					{
+						char *mbdescValue = cJSON_PrintUnformatted(mbdesc);
+
+						//ESP_LOGI("DATA","mbdescValue: %s\r\n",mbdescValue);
+
+						ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
+
+						ESP_ERROR_CHECK(nvs_set_str(nvs, "mbdesc", mbdescValue));
+						ESP_ERROR_CHECK(nvs_commit(nvs));
+
+						cJSON_free(mbdescValue);
+
+						nvs_close(nvs);
+
+					}
+
+
 				}
 
-				cJSON *shw_rs485 = cJSON_GetObjectItem(dt_Json, "shw_dev_rs485");
-				if(shw_rs485 == NULL)
+				if(cJSON_HasObjectItem(dt_Json,(const char *)"shw_dev_rs485"))
 				{
-					ESP_LOGE("JSON","shw_rs485 error");
+					cJSON *shw_rs485 = cJSON_GetObjectItem(dt_Json, "shw_dev_rs485");
+					if(shw_rs485 == NULL)
+					{
+						ESP_LOGE("JSON","shw_rs485 error");
+					}
+					else
+					{
+						ESP_LOGI("JSON","shw_rs485 OK");
+					}
+
+					if(cJSON_IsString(shw_rs485) && shw_rs485->valuestring != NULL)
+					{
+
+						ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
+
+						size_t len;
+
+						nvs_get_str(nvs, "mbdesc", NULL, &len);
+						nvs_get_str(nvs, "mbdesc", nvs_stored_data.mb_desc, &len);
+						//ESP_LOGI("DESC", "%s", nvs_stored_data.mb_desc);
+
+						nvs_close(nvs);
+
+						cJSON *mb_desc,*root;
+
+						root = cJSON_CreateObject();
+
+						mb_desc = cJSON_Parse(nvs_stored_data.mb_desc);
+
+
+						cJSON_AddItemReferenceToObject(root, "mbdesc", mb_desc);
+
+						char *json_dt = cJSON_PrintUnformatted(root);
+
+						wsserver_data_t send_data;
+
+						memset(send_data.data, 0, WS_MAX_DATA_LEN);
+						sprintf((char *)send_data.data, "%s", json_dt);
+						send_data.len = strlen((char *)send_data.data);
+						ESP_LOGE(TAG, "Send to ws: %s", (char *)send_data.data);
+
+						wsserver_sendto_all(&ws, &send_data);
+
+						cJSON_Delete(mb_desc);
+
+						cJSON_Delete(root);
+
+						cJSON_free(json_dt);
+
+					}
+
+
 				}
-				else
-				{
-					ESP_LOGI("JSON","shw_rs485 OK");
-				}
+
 
 //				cJSON *lorawan = cJSON_GetObjectItem(dt_Json, "wan");
 
-				if(cJSON_IsString(shw_rs485) && shw_rs485->valuestring != NULL)
-				{
 
-					ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
 
-					size_t len;
 
-					nvs_get_str(nvs, "mbdesc", NULL, &len);
-					nvs_get_str(nvs, "mbdesc", nvs_stored_data.mb_desc, &len);
-					//ESP_LOGI("DESC", "%s", nvs_stored_data.mb_desc);
-
-					nvs_close(nvs);
-
-					cJSON *mb_desc,*root;
-
-					root = cJSON_CreateObject();
-
-					mb_desc = cJSON_Parse(nvs_stored_data.mb_desc);
-
-					ESP_LOGI("LOG HEAP","free size %ld",esp_get_free_heap_size());
-
-					cJSON_AddItemReferenceToObject(root, "mbdesc", mb_desc);
-
-					char *json_dt = cJSON_PrintUnformatted(root);
-
-					wsserver_data_t send_data;
-
-					memset(send_data.data, 0, WS_MAX_DATA_LEN);
-					sprintf((char *)send_data.data, "%s", json_dt);
-					send_data.len = strlen((char *)send_data.data);
-					ESP_LOGE(TAG, "Send to ws: %s", (char *)send_data.data);
-
-					wsserver_sendto_all(&ws, &send_data);
-
-					cJSON_Delete(mb_desc);
-
-					cJSON_Delete(root);
-
-					cJSON_free(json_dt);
-
-				}
-
-				if(cJSON_IsObject(mbdesc))
-				{
-					char *mbdescValue = cJSON_PrintUnformatted(mbdesc);
-
-					//ESP_LOGI("DATA","mbdescValue: %s\r\n",mbdescValue);
-
-					ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
-
-					ESP_ERROR_CHECK(nvs_set_str(nvs, "mbdesc", mbdescValue));
-					ESP_ERROR_CHECK(nvs_commit(nvs));
-
-					cJSON_free(mbdescValue);
-
-					nvs_close(nvs);
-
-				}
 
 //				if(lorawan != NULL)
 //				{
@@ -262,9 +277,6 @@ static void ws_recv_task(void *pvParameters){
 //				}
 
 				cJSON_Delete(dt_Json);
-
-
-
 		}
 	}
 }
