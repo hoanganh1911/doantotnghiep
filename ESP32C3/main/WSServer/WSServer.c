@@ -106,7 +106,7 @@ void wsserver_stop(wsserver_t *pws){
 
 
 static esp_err_t web_handler(httpd_req_t *req){
-
+	if(req == NULL) return ESP_OK;
 	wsserver_t *pws = NULL;
 
 	if (req->user_ctx != NULL) {

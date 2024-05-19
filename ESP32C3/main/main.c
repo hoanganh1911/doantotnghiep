@@ -110,25 +110,23 @@ void app_main(void){
 
     wsserver_init(&ws);
 
-    xTaskCreate(ws_recv_task, "ws_receive_task", 10240, NULL, 5, NULL);
-    xTaskCreate(ws_new_cli, "ws new client", 4096, NULL, 5, NULL);
+    xTaskCreate(ws_recv_task, "ws_receive_task", 20480, NULL, 2, NULL);
+    xTaskCreate(ws_new_cli, "ws new client", 4096, NULL, 8, NULL);
 }
 
 static void ws_server_send_first_time()
 {
-
 	wsserver_data_t send_data;
 
 	char *data_rak = nvs_create_lorawan_data();
 	if(data_rak == NULL) return;
-	if(ws_start == true)
-	{
+	if(ws_start == true){
 		memset(send_data.data, 0, WS_MAX_DATA_LEN);
 		memcpy(send_data.data, data_rak, strlen(data_rak));
 		send_data.len = strlen(data_rak);
 		wsserver_sendto_all(&ws, &send_data);
 	}
-	if(data_rak == NULL) free(data_rak);
+	if(data_rak != NULL) free(data_rak);
 
 }
 static void ws_new_cli(void *pvParameters){
@@ -138,193 +136,176 @@ static void ws_new_cli(void *pvParameters){
 		bits = xEventGroupWaitBits(event_group, (1 << 0), pdTRUE, pdFALSE, portMAX_DELAY);
 		if(bits & (1 << 0)){
 			ws_server_send_first_time();
-
-			xEventGroupClearBits(event_group, (1 << 0));
 		}
-
-
 	}
 }
 
 
 static void ws_recv_task(void *pvParameters){
-	ws_recv_dt_t rcv_data;
+	ws_recv_dt_t *rcv_data;
 	while(1)
 	{
 		if (xQueueReceive(ws_recv_queue, (void *)&rcv_data, (TickType_t)portMAX_DELAY)) {
+			if(rcv_data == NULL) continue;
+			if(rcv_data->data == NULL) continue;
 
-				rcv_data.data[rcv_data.len] = '\0';
+			rcv_data->data[rcv_data->len] = '\0';
+			ESP_LOGI("Data","Recv data from queue: %s with len %d",rcv_data->data, strlen(rcv_data->data));
 
-				ESP_LOGI("Data","Recv data from queue: %s with len %d",rcv_data.data,strlen(rcv_data.data));
+			ESP_LOGI("LOG HEAP","free size %ld",esp_get_free_heap_size());
+			if(rcv_data->data == NULL) continue;
+			cJSON *dt_Json =  cJSON_Parse(rcv_data->data);
 
-				ESP_LOGI("LOG HEAP","free size %ld",esp_get_free_heap_size());
-				cJSON *dt_Json =  cJSON_Parse((const char *)rcv_data.data);
+			ESP_LOGE("CCCCCCCCCCCCC", "ccccccccccccccccccc");
+			if(!cJSON_IsObject(dt_Json)) continue;
 
-				if(dt_Json == NULL)
+			if(cJSON_HasObjectItem(dt_Json, (const char *)"calib"))
+			{
+				cJSON *calib = cJSON_GetObjectItem(dt_Json, "calib");
+				if(calib == NULL)
 				{
-					ESP_LOGE("JSON","dt_JSON error");
+					ESP_LOGE("JSON","calib error");
 				}
 				else
 				{
-					ESP_LOGI("JSON","dt_JSON OK");
+					ESP_LOGI("JSON","calib OK");
 				}
-
-				free(rcv_data.data);
-
-				if(cJSON_HasObjectItem(dt_Json, (const char *)"calib"))
+				if(cJSON_IsObject(calib))
 				{
-					cJSON *calib = cJSON_GetObjectItem(dt_Json, "calib");
-					if(calib == NULL)
-					{
-						ESP_LOGE("JSON","calib error");
-					}
-					else
-					{
-						ESP_LOGI("JSON","calib OK");
-					}
-					if(cJSON_IsObject(calib))
-					{
-						char *calibValue = cJSON_PrintUnformatted(calib);
+					char *calibValue = cJSON_PrintUnformatted(calib);
 
-						ESP_LOGI("DATA","calibValue: %s\r\n",calibValue);
+					ESP_LOGI("DATA","calibValue: %s\r\n",calibValue);
 
-						ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
+					ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
 
-						ESP_ERROR_CHECK(nvs_set_str(nvs, "calib", calibValue));
-						ESP_ERROR_CHECK(nvs_commit(nvs));
+					ESP_ERROR_CHECK(nvs_set_str(nvs, "calib", calibValue));
+					ESP_ERROR_CHECK(nvs_commit(nvs));
 
-						cJSON_free(calibValue);
-
-						nvs_close(nvs);
-					}
+					nvs_close(nvs);
+					if(calibValue) free(calibValue);
 				}
+			}
 
-				if(cJSON_HasObjectItem(dt_Json,(const char *)"mbdesc"))
+			if(cJSON_HasObjectItem(dt_Json,(const char *)"mbdesc"))
+			{
+				cJSON *mbdesc = cJSON_GetObjectItem(dt_Json, "mbdesc");
+				if(mbdesc == NULL)
 				{
-					cJSON *mbdesc = cJSON_GetObjectItem(dt_Json, "mbdesc");
-					if(mbdesc == NULL)
-					{
-						ESP_LOGE("JSON","mbdesc error");
-					}
-					else
-					{
-						ESP_LOGI("JSON","mbdesc OK");
-					}
-					if(cJSON_IsObject(mbdesc))
-					{
-						char *mbdescValue = cJSON_PrintUnformatted(mbdesc);
-
-						//ESP_LOGI("DATA","mbdescValue: %s\r\n",mbdescValue);
-
-						ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
-
-						ESP_ERROR_CHECK(nvs_set_str(nvs, "mbdesc", mbdescValue));
-						ESP_ERROR_CHECK(nvs_commit(nvs));
-
-						cJSON_free(mbdescValue);
-
-						nvs_close(nvs);
-					}
+					ESP_LOGE("JSON","mbdesc error");
 				}
-
-				if(cJSON_HasObjectItem(dt_Json,(const char *)"shw_dev_rs485"))
+				else
 				{
-					cJSON *shw_rs485 = cJSON_GetObjectItem(dt_Json, "shw_dev_rs485");
-					if(shw_rs485 == NULL)
-					{
-						ESP_LOGE("JSON","shw_rs485 error");
-					}
-					else
-					{
-						ESP_LOGI("JSON","shw_rs485 OK");
-					}
-
-					if(cJSON_IsString(shw_rs485) && shw_rs485->valuestring != NULL)
-					{
-
-						ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
-
-						size_t len;
-
-						nvs_get_str(nvs, "mbdesc", NULL, &len);
-						nvs_get_str(nvs, "mbdesc", nvs_stored_data.mb_desc, &len);
-						//ESP_LOGI("DESC", "%s", nvs_stored_data.mb_desc);
-
-						nvs_close(nvs);
-
-						cJSON *mb_desc,*root;
-
-						root = cJSON_CreateObject();
-
-						mb_desc = cJSON_Parse(nvs_stored_data.mb_desc);
-
-
-						cJSON_AddItemReferenceToObject(root, "mbdesc", mb_desc);
-
-						char *json_dt = cJSON_PrintUnformatted(root);
-
-						wsserver_data_t send_data;
-
-						memset(send_data.data, 0, WS_MAX_DATA_LEN);
-						sprintf((char *)send_data.data, "%s", json_dt);
-						send_data.len = strlen((char *)send_data.data);
-						ESP_LOGE(TAG, "Send to ws: %s", (char *)send_data.data);
-
-						wsserver_sendto_all(&ws, &send_data);
-
-						cJSON_Delete(mb_desc);
-
-						cJSON_Delete(root);
-
-						cJSON_free(json_dt);
-					}
+					ESP_LOGI("JSON","mbdesc OK");
 				}
-
-				if(cJSON_HasObjectItem(dt_Json,(const char *)"wan"))
+				if(cJSON_IsObject(mbdesc))
 				{
-					cJSON *lorawan = cJSON_GetObjectItem(dt_Json, "wan");
-					if(lorawan == NULL)
-					{
-						ESP_LOGE("JSON","lorawan error");
-					}
-					else
-					{
-						ESP_LOGI("JSON","lorawan OK");
-					}
-					if(cJSON_IsObject(lorawan))
-					{
-						cJSON *joineui = cJSON_GetObjectItem(lorawan, "appeui");
-						cJSON *appkey = cJSON_GetObjectItem(lorawan, "appkey");
-						cJSON *period = cJSON_GetObjectItem(lorawan, "period");
+					char *mbdescValue = cJSON_PrintUnformatted(mbdesc);
 
-						char *joineui_c = cJSON_GetStringValue(joineui);
-						ESP_LOGI("DATA","joineui_c: %s\r\n",joineui_c);
-						char *appkey_c = cJSON_GetStringValue(appkey);
-						ESP_LOGI("DATA","appkey_c: %s\r\n",appkey_c);
-						uint32_t period_n = cJSON_GetNumberValue(period);
-						ESP_LOGI("DATA","period_n: %ld\r\n",period_n);
+					//ESP_LOGI("DATA","mbdescValue: %s\r\n",mbdescValue);
 
-						ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
+					ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
 
-						ESP_ERROR_CHECK(nvs_set_str(nvs, "appeui", joineui_c));
-						ESP_ERROR_CHECK(nvs_set_str(nvs, "appkey", appkey_c));
-						ESP_ERROR_CHECK(nvs_set_u32(nvs, "period", period_n));
+					ESP_ERROR_CHECK(nvs_set_str(nvs, "mbdesc", mbdescValue));
+					ESP_ERROR_CHECK(nvs_commit(nvs));
 
-						ESP_ERROR_CHECK(nvs_commit(nvs));
+					nvs_close(nvs);
 
-						nvs_close(nvs);
+					if(mbdescValue) free(mbdescValue);
+				}
+			}
 
-						while(1){
-							ESP_LOGI("AT","Try to reset !!");
-							vTaskDelay(100/portTICK_PERIOD_MS);
-							char *RAK_RST_AT = "ATZ\r\n";
-							uart_tx_chars(UART_NUM_1, (const char *)"ATZ\r\n", 5);
-						}
-
-					}
+			if(cJSON_HasObjectItem(dt_Json,(const char *)"shw_dev_rs485"))
+			{
+				cJSON *shw_rs485 = cJSON_GetObjectItem(dt_Json, "shw_dev_rs485");
+				if(shw_rs485 == NULL)
+				{
+					ESP_LOGE("JSON","shw_rs485 error");
+				}
+				else
+				{
+					ESP_LOGI("JSON","shw_rs485 OK");
 				}
 
-				cJSON_Delete(dt_Json);
+				if(cJSON_IsString(shw_rs485) && shw_rs485->valuestring != NULL)
+				{
+
+					ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
+
+					size_t len;
+
+					nvs_get_str(nvs, "mbdesc", NULL, &len);
+					nvs_get_str(nvs, "mbdesc", nvs_stored_data.mb_desc, &len);
+					//ESP_LOGI("DESC", "%s", nvs_stored_data.mb_desc);
+
+					nvs_close(nvs);
+
+					cJSON *mb_desc, *root;
+
+					root = cJSON_CreateObject();
+					mb_desc = cJSON_Parse(nvs_stored_data.mb_desc);
+
+					cJSON_AddItemReferenceToObject(root, "mbdesc", mb_desc);
+
+					char *json_dt = cJSON_PrintUnformatted(root);
+
+					wsserver_data_t send_data;
+
+					memset(send_data.data, 0, WS_MAX_DATA_LEN);
+					memcpy(send_data.data, json_dt, strlen(json_dt));
+					send_data.len = strlen(json_dt);
+					wsserver_sendto_all(&ws, &send_data);
+
+					if(mb_desc) cJSON_Delete(mb_desc);
+//					cJSON_Delete(root);
+
+					if(json_dt) free(json_dt);
+				}
+			}
+
+			if(cJSON_HasObjectItem(dt_Json,(const char *)"wan"))
+			{
+				cJSON *lorawan = cJSON_GetObjectItem(dt_Json, "wan");
+				if(cJSON_IsObject(lorawan))
+				{
+					cJSON *joineui = cJSON_GetObjectItem(lorawan, "appeui");
+					cJSON *appkey = cJSON_GetObjectItem(lorawan, "appkey");
+					cJSON *period = cJSON_GetObjectItem(lorawan, "period");
+
+					char *joineui_c = cJSON_GetStringValue(joineui);
+					ESP_LOGI("DATA","joineui_c: %s\r\n",joineui_c);
+					char *appkey_c = cJSON_GetStringValue(appkey);
+					ESP_LOGI("DATA","appkey_c: %s\r\n",appkey_c);
+					uint32_t period_n = cJSON_GetNumberValue(period);
+					ESP_LOGI("DATA","period_n: %ld\r\n",period_n);
+
+					ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
+
+					ESP_ERROR_CHECK(nvs_set_str(nvs, "appeui", joineui_c));
+					ESP_ERROR_CHECK(nvs_set_str(nvs, "appkey", appkey_c));
+					ESP_ERROR_CHECK(nvs_set_u32(nvs, "period", period_n));
+
+					ESP_ERROR_CHECK(nvs_commit(nvs));
+
+					nvs_close(nvs);
+
+					cJSON_Delete(dt_Json);
+
+					if(rcv_data->data) free(rcv_data->data);
+					if(rcv_data) free(rcv_data);
+
+					while(1){
+						ESP_LOGI("AT","Try to reset !!");
+						vTaskDelay(500/portTICK_PERIOD_MS);
+						uart_tx_chars(UART_NUM_1, (const char *)"ATZ\r\n", 5);
+					}
+
+				}
+			}
+
+			cJSON_Delete(dt_Json);
+
+			if(rcv_data->data) free(rcv_data->data);
+			if(rcv_data) free(rcv_data);
 		}
 	}
 }
@@ -338,15 +319,11 @@ static void uart_event_task(void *pvParameters){
 					char *rxdata = (char *)malloc(event.size*sizeof(char) + 1);
 					uart_read_bytes(UART_NUM_1, rxdata, event.size, portMAX_DELAY);
 					rxdata[event.size] = '\0';
-					//ESP_LOGW(TAG, "%s", rxdata);
+					ESP_LOGW(TAG, "%s", rxdata);
 
 					if(rxdata[0] == '{' && rxdata[event.size - 1] == '}'){ // Is JSON
 
 						cJSON *root = cJSON_Parse(rxdata);
-						if(root == NULL){
-							free(rxdata);
-							break;
-						}
 
 						cJSON* deveui_json = cJSON_GetObjectItem(root, "deveui");
 						if(deveui_json){
@@ -359,7 +336,6 @@ static void uart_event_task(void *pvParameters){
 							uart_send(json);
 							uint8_t endbyte = 0xFE;
 							uart_write_bytes(UART_NUM_1, &endbyte, 1);
-
 							free(json);
 						}
 
@@ -368,9 +344,8 @@ static void uart_event_task(void *pvParameters){
 							wsserver_data_t send_data;
 
 							memset(send_data.data, 0, WS_MAX_DATA_LEN);
-							sprintf((char *)send_data.data, "%s", rxdata);
-							send_data.len = strlen((char *)send_data.data);
-							ESP_LOGE(TAG, "Send to ws: %s", (char *)send_data.data);
+							memcpy(send_data.data, rxdata, strlen(rxdata));
+							send_data.len = strlen(rxdata);
 
 							wsserver_sendto_all(&ws, &send_data);
 						}
@@ -418,13 +393,15 @@ static void ws_eventhandler(wsserver_event_t event, wsserver_data_t *pdata, void
 
 			pdata->data[pdata->len] = '\0';
 
-			ws_recv_dt_t ws_recv_data;
-			ws_recv_data.data = (char *)(malloc(pdata->len * sizeof(char)));
-			memcpy(ws_recv_data.data,pdata->data,pdata->len);
-			ws_recv_data.len = pdata->len;
-			xQueueSend(ws_recv_queue,(void *)&ws_recv_data,portMAX_DELAY);
+			ws_recv_dt_t *ws_recv_data = (ws_recv_dt_t *)malloc(sizeof(ws_recv_dt_t));
+			if(ws_recv_data == NULL) break;
 
+			ws_recv_data->data = (char *)(malloc(pdata->len * sizeof(char)));
+			if(ws_recv_data->data == NULL) break;
 
+			memcpy(ws_recv_data->data, pdata->data, pdata->len);
+			ws_recv_data->len = pdata->len;
+			xQueueSend(ws_recv_queue, (void *)&ws_recv_data, portMAX_DELAY);
 		break;
 		default:
 
@@ -450,7 +427,7 @@ static void uart1_init(void){
 
     uart_set_pin(UART_NUM_1, GPIO_NUM_7, GPIO_NUM_6, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
-    xTaskCreate(uart_event_task, "uart_event_task", 8192, NULL, 12, NULL);
+    xTaskCreate(uart_event_task, "uart_event_task", 8192, NULL, 3, NULL);
 }
 
 
@@ -463,12 +440,10 @@ static void uart_send(char *data){
 	uint8_t a = data_len/100;
 	uint8_t b = data_len%100;
 
-	for(uint8_t i=0; i<a; i++){
+	for(uint8_t i=0; i<a; i++)
 		uart_write_bytes(UART_NUM_1, (char *)(x + i*100), 100);
-	}
-	if(b){
+	if(b)
 		uart_write_bytes(UART_NUM_1, (char *)(x + a*100), b);
-	}
 }
 
 //{"mbdata":{"SHT31 temperature": "3207","SHT31 humidity": "5200"}}
