@@ -13,7 +13,10 @@
 #include "esp_system.h"
 #include "esp_log.h"
 
-
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
 
 
 struct async_send_arg {
@@ -135,14 +138,22 @@ static esp_err_t web_handler(httpd_req_t *req){
 	return ret;
 }
 
+extern EventGroupHandle_t event_group;
+
 static esp_err_t ws_handler(httpd_req_t *req){
-	wsserver_t *pws = (wsserver_t *)req->user_ctx;
+	wsserver_t *pws = NULL;
+
+	if (req->user_ctx != NULL) {
+		pws = (wsserver_t *)req->user_ctx;
+	}
+
 	wsserver_data_t evdata;;
 
     if (req->method == HTTP_GET) {
         int sockfd = httpd_req_to_sockfd(req);
         ESP_LOGI(TAG, "New client sockfd[%d]", sockfd);
-        //ws_server_send_first_time();
+
+        xEventGroupSetBits(event_group, (1<<0));
 
         UBaseType_t queue_nb_item = uxQueueMessagesWaiting(pws->queue_sockfd);
         while(queue_nb_item--){

@@ -194,9 +194,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		            	handleSubDevice();
 		        	}
 	    		});
-				
-
-				
+							
 				function handleSubDevice() {
 					var delete_device = document.querySelector('input[name="delete_RS485"]');
 					
@@ -321,6 +319,7 @@ document.addEventListener("DOMContentLoaded", function() {
 							rqty : read_quanty,
 						};
 						data.baud = parseInt(data.baud);
+						data.rqty = parseInt(data.rqty);
                     	var data_total = {
                     		[name] : data
                     	};	

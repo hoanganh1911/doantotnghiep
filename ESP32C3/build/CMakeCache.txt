@@ -340,6 +340,9 @@ PYTHON:UNINITIALIZED=/home/hoanganh/.espressif/python_env/idf5.2_py3.10_env/bin/
 //No help, variable specified on the command line.
 PYTHON_DEPS_CHECKED:UNINITIALIZED=1
 
+//No help, variable specified on the command line.
+SDKCONFIG:UNINITIALIZED=sdkconfig
+
 //Allow unsafe builds. These builds ARE NOT SECURE.
 UNSAFE_BUILD:BOOL=OFF
 

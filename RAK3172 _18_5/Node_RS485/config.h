@@ -13,6 +13,8 @@
 #define USR_BTN_PIN       PA9
 #define BAT_SENSE_PIN     PB2
 
+#define ANALOG_SAMPLE_NUMBER 100
+
 #define MB_DESC_SET_MAX_SIZE           10
 #define MB_FCODE_READ_COILS            0x01
 #define MB_FCODE_READ_DISCRTE_INPUTS   0x02

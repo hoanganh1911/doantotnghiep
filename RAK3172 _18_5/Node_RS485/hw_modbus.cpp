@@ -67,10 +67,10 @@ void led_toggle(void){
 float batt_voltage(void){
     uint16_t x = 0;
     
-    for(int i=0; i<10; i++)
+    for(int i=0; i<ANALOG_SAMPLE_NUMBER; i++)
         x += analogRead(BAT_SENSE_PIN);
 
-    return 0.00544 * (float)(x/10.0);
+    return 0.00544 * (float)((float)x/ANALOG_SAMPLE_NUMBER);
 }
 
 

@@ -151,12 +151,15 @@ char *create_view_data(void){
             data[(const char *)mb_select_slave(i)->desc] = mb_select_slave(i)->rdata[0];
     }
 
+    data["batt"] = (int)(batt_voltage() * 100);
+    root["data"] = data;
+
     String json_str = JSON.stringify(root);
     size_t len = json_str.length();
     s = (char *)malloc(len * sizeof(char) + 1);
     memset(s, 0, len+1);
     json_str.toCharArray(s, len+1);
-    
+
     return s;
 }
 

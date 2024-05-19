@@ -4,6 +4,8 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
 
 #include "esp_system.h"
 #include "esp_log.h"
@@ -31,8 +33,6 @@
 #define UART1_BUF_SIZE (2048)
 
 
-
-
 static void wifiap_eventhandler(wifi_event_t event, void *param);
 static void ws_eventhandler(wsserver_event_t event, wsserver_data_t *pdata, void *param);
 
@@ -42,6 +42,10 @@ static void uart_event_task(void *pvParameters);
 static void uart_send(char *data);
 
 static void ws_recv_task(void *pvParameters);
+
+static void ws_new_cli(void *pvParameters);
+
+EventGroupHandle_t event_group;
 
 nvs_handle_t nvs;
 nvs_data_t nvs_stored_data = {0};
@@ -82,7 +86,7 @@ wsserver_t ws = {
 
 bool ws_start = false;
 uint8_t ledc_state = 0;
-
+extern bool _relwbnwcli;
 typedef struct {
 	char *data;
 	uint8_t len;
@@ -92,6 +96,10 @@ typedef struct {
 void app_main(void){
     nvs_init();
     nvs_read_stored_data();
+
+
+    event_group = xEventGroupCreate();
+
 
     uart1_init();
 
@@ -104,7 +112,8 @@ void app_main(void){
 
     wsserver_init(&ws);
 
-    xTaskCreate(ws_recv_task,"ws_receive_task",4096,NULL,5,NULL);
+    xTaskCreate(ws_recv_task,"ws_receive_task",8192,NULL,5,NULL);
+    xTaskCreate(ws_new_cli,"ws new client",4019,NULL,5,NULL);
 }
 
 static void ws_server_send_first_time()
@@ -124,7 +133,22 @@ static void ws_server_send_first_time()
 	cJSON_free(data_rak);
 
 }
+static void ws_new_cli(void *pvParameters){
+	EventBits_t bits;
+	while(1)
+	{
+		bits = xEventGroupWaitBits(event_group, (1 << 0), pdTRUE, pdFALSE, portMAX_DELAY);
+		if(bits & (1 << 0))
+		{
+			//ESP_LOGI("EVENT BIT","Open new client, send data first time ");
+			ws_server_send_first_time();
 
+			xEventGroupClearBits(event_group, (1 << 0));
+		}
+
+
+	}
+}
 
 
 static void ws_recv_task(void *pvParameters){
@@ -138,8 +162,9 @@ static void ws_recv_task(void *pvParameters){
 				ESP_LOGI("Data","Recv data from queue: %s with len %d",rcv_data.data,strlen(rcv_data.data));
 
 				ESP_LOGI("LOG HEAP","free size %ld",esp_get_free_heap_size());
-				const char * c_char_dt = (const char *)rcv_data.data;
+				const char *c_char_dt = (const char *)rcv_data.data;
 				cJSON *dt_Json =  cJSON_Parse(c_char_dt);
+
 				if(dt_Json == NULL)
 				{
 					ESP_LOGE("JSON","dt_JSON error");
@@ -293,6 +318,7 @@ static void uart_event_task(void *pvParameters){
 					ESP_LOGW(TAG, "%s", rxdata);
 
 					if(rxdata[0] == '{' && rxdata[event.size - 1] == '}'){ // Is JSON
+
 						cJSON *root = cJSON_Parse(rxdata);
 						if(root == NULL){
 							free(rxdata);
@@ -325,7 +351,6 @@ static void uart_event_task(void *pvParameters){
 
 							wsserver_sendto_all(&ws, &send_data);
 						}
-
 						cJSON_Delete(root);
 					}
 					free(rxdata);
@@ -363,7 +388,7 @@ static void ws_eventhandler(wsserver_event_t event, wsserver_data_t *pdata, void
 		case WSSERVER_EVENT_HANDSHAKE:
 			ESP_LOGI(TAG, "Handshake, sockfd[%d]", pdata->clientid);
 			ws_start = true;
-			ws_server_send_first_time();
+			//ws_server_send_first_time();
 		break;
 		case WSSERVER_EVENT_RECV:
 			ESP_LOGI(TAG, "Receive \"%s\" with len %ld from sockfd[%d]", (char *)pdata->data,pdata->len, pdata->clientid);

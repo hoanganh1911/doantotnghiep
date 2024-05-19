@@ -69,7 +69,9 @@ bool config_node(config_node_t *conf_data){
 
     JSONVar wan = root["wan"];
     JSONVar mbdesc = root["mbdesc"];
+    Serial.print("LoRaWAN config: ");
     Serial.println(JSON.stringify(wan));
+    Serial.print("Modbus descriptor: ");
     Serial.println(JSON.stringify(mbdesc));
 
     if (wan.hasOwnProperty("name")) conf_data->lorawan.name = String((const char *)wan["name"]);
