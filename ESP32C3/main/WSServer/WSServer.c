@@ -103,7 +103,13 @@ void wsserver_stop(wsserver_t *pws){
 
 
 static esp_err_t web_handler(httpd_req_t *req){
-	wsserver_t *pws = (wsserver_t *)req->user_ctx;
+
+	wsserver_t *pws = NULL;
+
+	if (req->user_ctx != NULL) {
+		pws = (wsserver_t *)req->user_ctx;
+	}
+
 	esp_err_t ret = ESP_OK;
 
 	if (req->method == HTTP_GET) {

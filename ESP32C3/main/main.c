@@ -121,7 +121,7 @@ static void ws_server_send_first_time()
 		ESP_LOGE(TAG, "Send to ws: %s", (char *)send_data.data);
 		wsserver_sendto_all(&ws, &send_data);
 	}
-	free(data_rak);
+	cJSON_free(data_rak);
 
 }
 
