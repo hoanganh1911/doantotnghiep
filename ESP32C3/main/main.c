@@ -97,13 +97,11 @@ void app_main(void){
     nvs_init();
     nvs_read_stored_data();
 
-
     event_group = xEventGroupCreate();
-
 
     uart1_init();
 
-    ws_recv_queue = xQueueCreate(10,sizeof(ws_recv_dt_t));
+    ws_recv_queue = xQueueCreate(10, sizeof(ws_recv_dt_t));
 
     wifi_init();
     wifiap_init(&ap1);
@@ -112,8 +110,8 @@ void app_main(void){
 
     wsserver_init(&ws);
 
-    xTaskCreate(ws_recv_task,"ws_receive_task",8192,NULL,5,NULL);
-    xTaskCreate(ws_new_cli,"ws new client",4019,NULL,5,NULL);
+    xTaskCreate(ws_recv_task, "ws_receive_task", 10240, NULL, 5, NULL);
+    xTaskCreate(ws_new_cli, "ws new client", 4096, NULL, 5, NULL);
 }
 
 static void ws_server_send_first_time()
@@ -122,15 +120,15 @@ static void ws_server_send_first_time()
 	wsserver_data_t send_data;
 
 	char *data_rak = nvs_create_lorawan_data();
+	if(data_rak == NULL) return;
 	if(ws_start == true)
 	{
 		memset(send_data.data, 0, WS_MAX_DATA_LEN);
-		sprintf((char *)send_data.data, "%s", data_rak);
-		send_data.len = strlen((char *)send_data.data);
-		ESP_LOGE(TAG, "Send to ws: %s", (char *)send_data.data);
+		memcpy(send_data.data, data_rak, strlen(data_rak));
+		send_data.len = strlen(data_rak);
 		wsserver_sendto_all(&ws, &send_data);
 	}
-	cJSON_free(data_rak);
+	if(data_rak == NULL) free(data_rak);
 
 }
 static void ws_new_cli(void *pvParameters){
@@ -138,9 +136,7 @@ static void ws_new_cli(void *pvParameters){
 	while(1)
 	{
 		bits = xEventGroupWaitBits(event_group, (1 << 0), pdTRUE, pdFALSE, portMAX_DELAY);
-		if(bits & (1 << 0))
-		{
-			//ESP_LOGI("EVENT BIT","Open new client, send data first time ");
+		if(bits & (1 << 0)){
 			ws_server_send_first_time();
 
 			xEventGroupClearBits(event_group, (1 << 0));
@@ -162,8 +158,7 @@ static void ws_recv_task(void *pvParameters){
 				ESP_LOGI("Data","Recv data from queue: %s with len %d",rcv_data.data,strlen(rcv_data.data));
 
 				ESP_LOGI("LOG HEAP","free size %ld",esp_get_free_heap_size());
-				const char *c_char_dt = (const char *)rcv_data.data;
-				cJSON *dt_Json =  cJSON_Parse(c_char_dt);
+				cJSON *dt_Json =  cJSON_Parse((const char *)rcv_data.data);
 
 				if(dt_Json == NULL)
 				{
@@ -175,6 +170,34 @@ static void ws_recv_task(void *pvParameters){
 				}
 
 				free(rcv_data.data);
+
+				if(cJSON_HasObjectItem(dt_Json, (const char *)"calib"))
+				{
+					cJSON *calib = cJSON_GetObjectItem(dt_Json, "calib");
+					if(calib == NULL)
+					{
+						ESP_LOGE("JSON","calib error");
+					}
+					else
+					{
+						ESP_LOGI("JSON","calib OK");
+					}
+					if(cJSON_IsObject(calib))
+					{
+						char *calibValue = cJSON_PrintUnformatted(calib);
+
+						ESP_LOGI("DATA","calibValue: %s\r\n",calibValue);
+
+						ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
+
+						ESP_ERROR_CHECK(nvs_set_str(nvs, "calib", calibValue));
+						ESP_ERROR_CHECK(nvs_commit(nvs));
+
+						cJSON_free(calibValue);
+
+						nvs_close(nvs);
+					}
+				}
 
 				if(cJSON_HasObjectItem(dt_Json,(const char *)"mbdesc"))
 				{
@@ -201,10 +224,7 @@ static void ws_recv_task(void *pvParameters){
 						cJSON_free(mbdescValue);
 
 						nvs_close(nvs);
-
 					}
-
-
 				}
 
 				if(cJSON_HasObjectItem(dt_Json,(const char *)"shw_dev_rs485"))
@@ -257,49 +277,52 @@ static void ws_recv_task(void *pvParameters){
 						cJSON_Delete(root);
 
 						cJSON_free(json_dt);
-
 					}
-
-
 				}
 
+				if(cJSON_HasObjectItem(dt_Json,(const char *)"wan"))
+				{
+					cJSON *lorawan = cJSON_GetObjectItem(dt_Json, "wan");
+					if(lorawan == NULL)
+					{
+						ESP_LOGE("JSON","lorawan error");
+					}
+					else
+					{
+						ESP_LOGI("JSON","lorawan OK");
+					}
+					if(cJSON_IsObject(lorawan))
+					{
+						cJSON *joineui = cJSON_GetObjectItem(lorawan, "appeui");
+						cJSON *appkey = cJSON_GetObjectItem(lorawan, "appkey");
+						cJSON *period = cJSON_GetObjectItem(lorawan, "period");
 
-//				cJSON *lorawan = cJSON_GetObjectItem(dt_Json, "wan");
+						char *joineui_c = cJSON_GetStringValue(joineui);
+						ESP_LOGI("DATA","joineui_c: %s\r\n",joineui_c);
+						char *appkey_c = cJSON_GetStringValue(appkey);
+						ESP_LOGI("DATA","appkey_c: %s\r\n",appkey_c);
+						uint32_t period_n = cJSON_GetNumberValue(period);
+						ESP_LOGI("DATA","period_n: %ld\r\n",period_n);
 
+						ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
 
+						ESP_ERROR_CHECK(nvs_set_str(nvs, "appeui", joineui_c));
+						ESP_ERROR_CHECK(nvs_set_str(nvs, "appkey", appkey_c));
+						ESP_ERROR_CHECK(nvs_set_u32(nvs, "period", period_n));
 
+						ESP_ERROR_CHECK(nvs_commit(nvs));
 
+						nvs_close(nvs);
 
-//				if(lorawan != NULL)
-//				{
-//					cJSON *joineui = cJSON_GetObjectItem(lorawan, "appeui");
-//					cJSON *appkey = cJSON_GetObjectItem(lorawan, "appkey");
-//					cJSON *period = cJSON_GetObjectItem(lorawan, "period");
-//
-//					char *joineui_c = cJSON_GetStringValue(joineui);
-//					ESP_LOGI("DATA","joineui_c: %s\r\n",joineui_c);
-//					char *appkey_c = cJSON_GetStringValue(appkey);
-//					ESP_LOGI("DATA","appkey_c: %s\r\n",appkey_c);
-//					uint32_t period_n = cJSON_GetNumberValue(period);
-//					ESP_LOGI("DATA","period_n: %ld\r\n",period_n);
-//
-//					ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
-//
-//					ESP_ERROR_CHECK(nvs_set_str(nvs, "appeui", joineui_c));
-//					ESP_ERROR_CHECK(nvs_set_str(nvs, "appkey", appkey_c));
-//					ESP_ERROR_CHECK(nvs_set_u32(nvs, "period", period_n));
-//
-//					ESP_ERROR_CHECK(nvs_commit(nvs));
-//
-//					nvs_close(nvs);
-//
-//					while(1)
-//					{
-//						uart_send("ATZ\r\n");
-//						vTaskDelay(1000/portTICK_PERIOD_MS);
-//					}
-//
-//				}
+						while(1){
+							ESP_LOGI("AT","Try to reset !!");
+							vTaskDelay(100/portTICK_PERIOD_MS);
+							char *RAK_RST_AT = "ATZ\r\n";
+							uart_tx_chars(UART_NUM_1, (const char *)"ATZ\r\n", 5);
+						}
+
+					}
+				}
 
 				cJSON_Delete(dt_Json);
 		}
@@ -315,7 +338,7 @@ static void uart_event_task(void *pvParameters){
 					char *rxdata = (char *)malloc(event.size*sizeof(char) + 1);
 					uart_read_bytes(UART_NUM_1, rxdata, event.size, portMAX_DELAY);
 					rxdata[event.size] = '\0';
-					ESP_LOGW(TAG, "%s", rxdata);
+					//ESP_LOGW(TAG, "%s", rxdata);
 
 					if(rxdata[0] == '{' && rxdata[event.size - 1] == '}'){ // Is JSON
 

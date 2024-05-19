@@ -191,4 +191,3 @@ void get_sensor_data_and_send(bool lorawan_is_true){
 
 
 
-

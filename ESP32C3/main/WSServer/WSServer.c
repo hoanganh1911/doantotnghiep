@@ -222,6 +222,7 @@ void wsserver_sendto_all(wsserver_t *pws, wsserver_data_t *pdata){
 
 	config_data_to_send(arg, pws, pdata);
 	arg->all_client = true;
+	ESP_LOGE(TAG, "%s", pdata->data);
 
 	ESP_ERROR_CHECK(httpd_queue_work(pws->httpd, ws_async_send, (void *)arg));
 }
