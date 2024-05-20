@@ -24,8 +24,17 @@
 
 #include "json.h"
 
+#include "driver/gpio.h"
 
-#define WIFI_SSID      "Dev@"
+#include "configure.h"
+
+#ifdef RS232
+	#define WIFI_SSID      "RS232@"
+#elif defined(ANALOG)
+	#define WIFI_SSID      "ANALOG@"
+#elif defined(RS485)
+	#define WIFI_SSID      "RS485@"
+#endif
 #define WIFI_CHANNEL   1
 #define WIFI_MAX_CONN  2
 #define AP_LOCALIP     "192.168.1.1"
@@ -100,6 +109,7 @@ void app_main(void){
 
     event_group = xEventGroupCreate();
 
+
     uart1_init();
 
     ws_recv_queue = xQueueCreate(10, sizeof(ws_recv_dt_t));
@@ -158,6 +168,7 @@ static void ws_recv_task(void *pvParameters){
 
 			json_t *dt_json = json_parse(rcv_data->data);
 
+#ifdef RS485
 			if(json_get_object(dt_json, (char *)("shw_dev_rs485")))
 			{
 
@@ -184,8 +195,6 @@ static void ws_recv_task(void *pvParameters){
 				free(s_data);
 				goto EndnFree;
 			}
-
-
 			if(json_get_object(dt_json,(char *)"mbdesc"))
 			{
 				char *s_data;
@@ -199,7 +208,35 @@ static void ws_recv_task(void *pvParameters){
 				free(s_data);
 				goto EndnFree;
 			}
+#elif defined(ANALOG)
+			if(json_get_object(dt_json, (char*)"calib"))
+			{
+				char *s_data;
+				asprintf(&s_data,"%s",dt_json->value_string);
+				ESP_LOGI("CALIB","%s",s_data);
 
+				ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
+				ESP_ERROR_CHECK(nvs_set_str(nvs, "calib", s_data));
+				ESP_ERROR_CHECK(nvs_commit(nvs));
+
+				free(s_data);
+				goto EndnFree;
+			}
+#elif defined(RS232)
+			if(json_get_object(dt_json, (char *) "mpn"))
+			{
+				char *s_data;
+				asprintf(&s_data,"%s",dt_json->value_string);
+				ESP_LOGI("MPN","%s",s_data);
+
+				ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
+				ESP_ERROR_CHECK(nvs_set_str(nvs, "mpn", s_data));
+				ESP_ERROR_CHECK(nvs_commit(nvs));
+
+				free(s_data);
+				goto EndnFree;
+			}
+#endif
 			if(json_get_object(dt_json,(char *)"wan"))
 			{
 
@@ -228,17 +265,17 @@ static void ws_recv_task(void *pvParameters){
 				free(appeui);
 				free(appkey);
 
-//				if(dt_json) json_release(dt_json);
-//
-//				if(dt_child) json_release(dt_child);
-//
-//				if(rcv_data) free(rcv_data);
-
+				gpio_reset_pin(GPIO_NUM_5);
+				gpio_reset_pin(GPIO_NUM_4);
+		        gpio_reset_pin(GPIO_NUM_6);
+		        gpio_reset_pin(GPIO_NUM_7);
+		        gpio_reset_pin(GPIO_NUM_10);
+		        gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
+		        vTaskDelay(1000/portTICK_PERIOD_MS);
 				while(1){
-					//ESP_LOGI("AT","Try to reset !!");
-					vTaskDelay(500/portTICK_PERIOD_MS);
-					uart_tx_chars(UART_NUM_1, (const char *)"ATZ\r\n", 5);
-					uart_wait_tx_done(UART_NUM_1,portMAX_DELAY);
+				    gpio_set_level(GPIO_NUM_4, 1);
+				    vTaskDelay(1000/portTICK_PERIOD_MS);
+
 				}
 			}
 

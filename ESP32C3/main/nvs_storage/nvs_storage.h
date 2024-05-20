@@ -13,7 +13,7 @@ extern "C"{
 #endif
 
 #include "stdint.h"
-
+#include "configure.h"
 
 typedef struct {
 	char name[64];
@@ -22,7 +22,13 @@ typedef struct {
 	char appeui[17];
 	char appkey[33];
 	uint32_t period;
+#ifdef RS485
 	char mb_desc[512];
+#elif defined(ANALOG)
+	char calib[100];
+#elif defined(RS232)
+	char mpn[100];
+#endif
 } nvs_data_t;
 
 

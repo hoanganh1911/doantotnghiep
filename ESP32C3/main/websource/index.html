@@ -30,14 +30,17 @@
 	}
 	
 	#dataview {
-	  background: white;
-	  border: 0 none;
-	  border-radius: 3px;
-	  box-shadow: 0 0 15px 1px rgba(0, 0, 0, 0.4);
-	  padding: 20px 30px;
-	  box-sizing: border-box;
-	  width: 80%;
-	  margin: 10% 10%;
+		background: white;
+		border: 0 none;
+		border-radius: 3px;
+		box-shadow: 0 0 15px 1px rgba(0, 0, 0, 0.4);
+		padding: 20px 30px;
+		box-sizing: border-box;
+		width: 80%;
+		margin: 10% 10%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
 	}
 	.data
 	{
@@ -215,6 +218,13 @@
 			</div>
 			
 			<div class="show_setting" id="rs232" style="display: none">
+				<select id="rs232_select">
+					<option value="" selected disabled>Select device</option>
+					<option value="LIGO SP-RS232">LIGO SP-RS232</option>
+					<option value="rs232_1" disabled>Comming soon ...</option>
+					<option value="rs232_2" disabled>Comming soon ...</option>
+					<option value="rs232_3" disabled>Comming soon ...</option>
+				</select>
 			</div>
 
 			<div class="show_setting" id="4_20mA" style="display: none;">

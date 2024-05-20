@@ -39,7 +39,9 @@ document.addEventListener("DOMContentLoaded", function() {
     var password;
 
     var selectedOption;
-
+	
+	var selectedRS232;
+	
  	var showButtons; 
 
 	var mbdesc;
@@ -125,8 +127,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 break;
         }
      });
-      
-  
+ 	
+ 	document.getElementById("rs232_select").addEventListener("change", function() {
+        selectedRS232 = this.value; 
+  	});
 
     const actions = {
         "deveui": (value) => {
@@ -363,6 +367,15 @@ document.addEventListener("DOMContentLoaded", function() {
         		
                     break;
                 case "rs232":
+					var data = selectedRS232;
+					console.log(data);
+					var s_data = {
+						"mpn" : data
+					}
+					var jsonData = JSON.stringify(s_data);
+					console.log(jsonData);
+            		websocket.send(jsonData);	
+            		alert("Select sensor ok ! Next and click submit and reset device....")
                     break;
                 case "4-20mA":
 				case "0-10Vdc":
@@ -383,6 +396,7 @@ document.addEventListener("DOMContentLoaded", function() {
     	            var jsonData = JSON.stringify(s_data);
             
             		websocket.send(jsonData);	
+            		alert("Calib ok ! Next and click submit and reset device....")
                     break;
                 default:
                     break;
