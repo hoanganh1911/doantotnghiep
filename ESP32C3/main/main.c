@@ -99,7 +99,7 @@ uint8_t ledc_state = 0;
 extern bool _relwbnwcli;
 typedef struct {
 	char *data;
-	uint8_t len;
+	uint32_t len;
 }ws_recv_dt_t;
 
 
@@ -178,7 +178,7 @@ static void ws_recv_task(void *pvParameters){
 
 				nvs_get_str(nvs, "mbdesc", NULL, &len);
 				nvs_get_str(nvs, "mbdesc", nvs_stored_data.mb_desc, &len);
-				//ESP_LOGI("DESC", "%s", nvs_stored_data.mb_desc);
+				ESP_LOGI("DESC", "%s", nvs_stored_data.mb_desc);
 
 				nvs_close(nvs);
 
@@ -195,6 +195,7 @@ static void ws_recv_task(void *pvParameters){
 				free(s_data);
 				goto EndnFree;
 			}
+
 			if(json_get_object(dt_json,(char *)"mbdesc"))
 			{
 				char *s_data;
@@ -208,6 +209,7 @@ static void ws_recv_task(void *pvParameters){
 				free(s_data);
 				goto EndnFree;
 			}
+
 #elif defined(ANALOG)
 			if(json_get_object(dt_json, (char*)"calib"))
 			{
@@ -297,7 +299,7 @@ static void uart_event_task(void *pvParameters){
 					char *rxdata = (char *)malloc(event.size*sizeof(char) + 1);
 					uart_read_bytes(UART_NUM_1, rxdata, event.size, portMAX_DELAY);
 					rxdata[event.size] = '\0';
-					//ESP_LOGW(TAG, "%s", rxdata);
+					ESP_LOGW(TAG, "%s", rxdata);
 
 					if(rxdata[0] == '{' && rxdata[event.size - 1] == '}'){ // Is JSON
 
