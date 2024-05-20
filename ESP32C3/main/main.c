@@ -327,7 +327,7 @@ static void ws_eventhandler(wsserver_event_t event, wsserver_data_t *pdata, void
 		case WSSERVER_EVENT_HANDSHAKE:
 			ESP_LOGI(TAG, "Handshake, sockfd[%d]", pdata->clientid);
 			ws_start = true;
-			//ws_server_send_first_time();
+			ws_server_send_first_time();
 		break;
 		case WSSERVER_EVENT_RECV:
 			ESP_LOGI(TAG, "Receive \"%s\" with len %ld from sockfd[%d]", (char *)pdata->data,pdata->len, pdata->clientid);
