@@ -17,6 +17,7 @@
 #include "cJSON.h"
 #include "string.h"
 
+#include "json.h"
 
 extern nvs_handle_t nvs;
 extern nvs_data_t nvs_stored_data;
@@ -147,49 +148,29 @@ void nvs_storing_eui(char *deveui){
 }
 
 char *nvs_create_lorawan_data(void){
-	char *json_string = NULL;
-	cJSON *root, *wan;
-
-	root = cJSON_CreateObject();
-
-	cJSON_AddItemToObject(root, "wan", wan = cJSON_CreateObject());
-
-	cJSON_AddStringToObject(wan, "name",   nvs_stored_data.name);
-	cJSON_AddStringToObject(wan, "deveui", nvs_stored_data.deveui);
-	cJSON_AddStringToObject(wan, "appeui", nvs_stored_data.appeui);
-	cJSON_AddStringToObject(wan, "appkey", nvs_stored_data.appkey);
-	cJSON_AddStringToObject(wan, "class",  nvs_stored_data.class);
-	cJSON_AddNumberToObject(wan, "period", nvs_stored_data.period);
-
-	json_string = cJSON_PrintUnformatted(root);
-
-	cJSON_Delete(root);
-
+	char *json_string;
+	asprintf(&json_string,"{\"wan\":{\"name\":\"%s\",\"deveui\":\"%s\",\"appeui\":\"%s\",\"appkey\":\"%s\",\"class\":\"%s\",\"period\":%ld}}",
+			nvs_stored_data.name,
+			nvs_stored_data.deveui,
+			nvs_stored_data.appeui,
+			nvs_stored_data.appkey,
+			nvs_stored_data.class,
+			nvs_stored_data.period);
 	return json_string;
 }
 
 char *nvs_create_rak_data(void){
 	char *json_string = NULL;
-	cJSON *root, *wan, *mb_desc;
 
-	mb_desc = cJSON_Parse(nvs_stored_data.mb_desc);
-	root = cJSON_CreateObject();
-
-	cJSON_AddItemToObject(root, "wan", wan = cJSON_CreateObject());
-
-	cJSON_AddStringToObject(wan, "name",   nvs_stored_data.name);
-	cJSON_AddStringToObject(wan, "deveui", nvs_stored_data.deveui);
-	cJSON_AddStringToObject(wan, "appeui", nvs_stored_data.appeui);
-	cJSON_AddStringToObject(wan, "appkey", nvs_stored_data.appkey);
-	cJSON_AddStringToObject(wan, "class",  nvs_stored_data.class);
-	cJSON_AddNumberToObject(wan, "period", nvs_stored_data.period);
-
-	cJSON_AddItemReferenceToObject(root, "mbdesc", mb_desc);
-
-	json_string = cJSON_PrintUnformatted(root);
-
-	cJSON_Delete(root);
-	cJSON_Delete(mb_desc);
+	asprintf(&json_string,"{\"wan\":{\"name\":\"%s\",\"deveui\":\"%s\",\"appeui\":\"%s\",\"appkey\":\"%s\",\"class\":\"%s\",\"period\":%ld},"
+																															"\"mbdesc\":%s}",
+			nvs_stored_data.name,
+			nvs_stored_data.deveui,
+			nvs_stored_data.appeui,
+			nvs_stored_data.appkey,
+			nvs_stored_data.class,
+			nvs_stored_data.period,
+			nvs_stored_data.mb_desc);
 
 	return json_string;
 }

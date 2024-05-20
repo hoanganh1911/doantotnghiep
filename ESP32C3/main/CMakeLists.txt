@@ -6,10 +6,12 @@ idf_component_register(
 	     WiFiAP/WiFiAP.c 
 	     WSServer/WSServer.c  
 	     nvs_storage/nvs_storage.c
+	     json/json.c
     INCLUDE_DIRS . 
     			 WiFiAP/ 
     			 WSServer/
-    			 nvs_storage/      
+    			 nvs_storage/
+    			 json/      
     PRIV_INCLUDE_DIRS   # optional, add here private include directories
     REQUIRES            # optional, list the public requirements (component names)
     PRIV_REQUIRES       # optional, list the private requirements

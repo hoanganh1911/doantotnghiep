@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "app-template",
-    "project_version":    "1cbd544-dirty",
+    "project_version":    "7d0678a-dirty",
     "project_path":       "/home/hoanganh/Downloads/Node_RS485/ESP32C3",
     "idf_path":           "/home/hoanganh/esp/esp-idf-v5.2.1",
     "build_dir":          "/home/hoanganh/Downloads/Node_RS485/ESP32C3/build",
@@ -700,7 +700,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "/home/hoanganh/Downloads/Node_RS485/ESP32C3/build/esp-idf/heap/libheap.a",
-            "sources": [ "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/heap_caps.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/heap_caps_init.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/multi_heap.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/tlsf/tlsf.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/port/memory_layout_utils.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/port/esp32c3/memory_layout.c" ],
+            "sources": [ "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/heap_caps.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/heap_caps_init.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/multi_heap.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/tlsf/tlsf.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/multi_heap_poisoning.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/heap_task_info.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/port/memory_layout_utils.c", "/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/port/esp32c3/memory_layout.c" ],
             "include_dirs": [ "include" ]
         },
         "http_parser": {
@@ -805,8 +805,8 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "/home/hoanganh/Downloads/Node_RS485/ESP32C3/build/esp-idf/main/libmain.a",
-            "sources": [ "/home/hoanganh/Downloads/Node_RS485/ESP32C3/main/main.c", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/main/WiFiAP/WiFiAP.c", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/main/WSServer/WSServer.c", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/main/nvs_storage/nvs_storage.c", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/build/index.html.S", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/build/style.css.S", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/build/script.js.S" ],
-            "include_dirs": [ ".", "WiFiAP/", "WSServer/", "nvs_storage/" ]
+            "sources": [ "/home/hoanganh/Downloads/Node_RS485/ESP32C3/main/main.c", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/main/WiFiAP/WiFiAP.c", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/main/WSServer/WSServer.c", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/main/nvs_storage/nvs_storage.c", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/main/json/json.c", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/build/index.html.S", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/build/style.css.S", "/home/hoanganh/Downloads/Node_RS485/ESP32C3/build/script.js.S" ],
+            "include_dirs": [ ".", "WiFiAP/", "WSServer/", "nvs_storage/", "json/" ]
         },
         "mbedtls": {
             "alias": "idf::mbedtls",
@@ -2101,7 +2101,7 @@
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
-            "include_dirs": [ ".", "WiFiAP/", "WSServer/", "nvs_storage/" ]
+            "include_dirs": [ ".", "WiFiAP/", "WSServer/", "nvs_storage/", "json/" ]
         }
     },
     "debug_prefix_map_gdbinit": ""

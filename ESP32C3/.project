@@ -634,9 +634,19 @@
 			<location>/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/heap_caps_init.c</location>
 		</link>
 		<link>
+			<name>build/ide/esp_idf_components/heap/heap_task_info.c</name>
+			<type>1</type>
+			<location>/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/heap_task_info.c</location>
+		</link>
+		<link>
 			<name>build/ide/esp_idf_components/heap/multi_heap.c</name>
 			<type>1</type>
 			<location>/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/multi_heap.c</location>
+		</link>
+		<link>
+			<name>build/ide/esp_idf_components/heap/multi_heap_poisoning.c</name>
+			<type>1</type>
+			<location>/home/hoanganh/esp/esp-idf-v5.2.1/components/heap/multi_heap_poisoning.c</location>
 		</link>
 		<link>
 			<name>build/ide/esp_idf_components/http_parser/http_parser.c</name>
