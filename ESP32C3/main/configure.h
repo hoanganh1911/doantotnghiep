@@ -9,9 +9,9 @@
 #define MAIN_CONFIGURE_H_
 
 
-#define RS485
+//#define RS485
 //#define RS232
-//#define ANALOG
+#define ANALOG
 
 
 #endif /* MAIN_CONFIGURE_H_ */
